@@ -231,20 +231,22 @@ var handleCloudWatch = function(event, context) {
   var timestamp = (new Date(event.Records[0].Sns.Timestamp)).getTime()/1000;
   var message = JSON.parse(event.Records[0].Sns.Message);
   var region = event.Records[0].EventSubscriptionArn.split(":")[3];
-  var subject = "AWS CloudWatch Notification";
+  var subject = message.AlarmName;
   var alarmName = message.AlarmName;
-  var metricName = message.Trigger.MetricName;
-  var oldState = message.OldStateValue;
-  var newState = message.NewStateValue;
-  var alarmDescription = message.AlarmDescription;
   var alarmReason = message.NewStateReason;
-  var trigger = message.Trigger;
   var color = "warning";
+  var icon = '';
+  var text = '';
+  var alarmUrl = "https://console.aws.amazon.com/cloudwatch/home?region=" + region + "#alarm:alarmFilter=ANY;name=" + encodeURIComponent(alarmName);
 
   if (message.NewStateValue === "ALARM") {
       color = "danger";
+      icon = "https://image.flaticon.com/icons/png/512/169/169776.png"; 
+      text = "WARNING";
   } else if (message.NewStateValue === "OK") {
       color = "good";
+      icon = "https://image.flaticon.com/icons/png/512/277/277612.png";
+      text = "RESOLVED";
   }
 
   var slackMessage = {
@@ -252,27 +254,10 @@ var handleCloudWatch = function(event, context) {
     attachments: [
       {
         "color": color,
-        "fields": [
-          { "title": "Alarm Name", "value": alarmName, "short": true },
-          { "title": "Alarm Description", "value": alarmReason, "short": false},
-          {
-            "title": "Trigger",
-            "value": trigger.Statistic + " "
-              + metricName + " "
-              + trigger.ComparisonOperator + " "
-              + trigger.Threshold + " for "
-              + trigger.EvaluationPeriods + " period(s) of "
-              + trigger.Period + " seconds.",
-              "short": false
-          },
-          { "title": "Old State", "value": oldState, "short": true },
-          { "title": "Current State", "value": newState, "short": true },
-          {
-            "title": "Link to Alarm",
-            "value": "https://console.aws.amazon.com/cloudwatch/home?region=" + region + "#alarm:alarmFilter=ANY;name=" + encodeURIComponent(alarmName),
-            "short": false
-          }
-        ],
+        "author_name": text,
+        "author_icon": icon,
+        "title": alarmReason,
+        "title_link": alarmUrl,
         "ts":  timestamp
       }
     ]
